@@ -35,6 +35,16 @@ jobs:
       - name: Smoke test (verificação pós-deploy)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          sleep 5
           docker ps
-          curl -s http://localhost:8081 | grep "Atualizado via pipeline"
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:8080 | grep -q "Atualizado via pipeline"; then
+              echo "Site no ar com o conteúdo esperado"
+              exit 0
+            fi
+            echo "Tentativa $i/20: aguardando o site..."
+            sleep 3
+          done
+          echo "Smoke test falhou"
+          curl -sS http://localhost:8080 || true
+          docker logs --tail 50 meu-container-web
+          exit 1
